@@ -2,17 +2,48 @@ import React, { useRef } from "react";
 import { StyleSheet, PanResponder, Animated } from "react-native";
 import { FlowHighlightView, FlowRow, FlowText } from "../overrides";
 import { COLORS } from "../../variables/styles";
+import { LoadingDots } from "../common/LoadingDots";
+import { formatTime } from "../../utils/functions";
 
-export const ActivityItem = ({ title }) => {
+const THRESHOLD = 60;
+
+export const ActivityItem = ({
+  id,
+  title,
+  description,
+  isActive,
+  time,
+  onActivityChange,
+  onSwipeStart,
+  onSwipeEnd,
+}) => {
   const pan = useRef(new Animated.ValueXY()).current;
+  const isSwipping = useRef(false);
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onPanResponderTerminationRequest: () => false,
-      onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], {
-        useNativeDriver: false,
-      }),
+      onPanResponderMove: (event, gestureState) => {
+        const currentX = gestureState.dx;
+        if (currentX > THRESHOLD) {
+          // activate
+          onActivityChange({ id, state: true });
+        }
+        if (currentX < -THRESHOLD) {
+          //deactivate
+          onActivityChange({ id, state: false });
+        }
+        if (Math.abs(currentX) > THRESHOLD && !isSwipping.current) {
+          onSwipeStart();
+        }
+        Animated.event([null, { dx: pan.x, dy: pan.y }], {
+          useNativeDriver: false,
+        })(event, gestureState);
+      },
       onPanResponderRelease: () => {
+        isSwipping.current = false;
+        onSwipeEnd();
         Animated.spring(pan, {
           toValue: { x: 0, y: 0 },
           useNativeDriver: false,
@@ -20,6 +51,10 @@ export const ActivityItem = ({ title }) => {
       },
     })
   ).current;
+
+  const itemBackground = isActive
+    ? { backgroundColor: COLORS.semiDarkGray }
+    : { backgroundColor: COLORS.darkGray };
 
   return (
     <Animated.View
@@ -30,10 +65,14 @@ export const ActivityItem = ({ title }) => {
         transform: [{ translateX: pan.x }],
       }}
     >
-      <FlowHighlightView style={styles.itemContainer}>
+      <FlowHighlightView style={{ ...styles.itemContainer, ...itemBackground }}>
         <FlowRow style={styles.row}>
           <FlowText>{title}</FlowText>
-          <FlowText style={styles.time}>00:00:00</FlowText>
+          {isActive ? (
+            <LoadingDots />
+          ) : (
+            <FlowText style={styles.time}>{formatTime(time)}</FlowText>
+          )}
         </FlowRow>
       </FlowHighlightView>
     </Animated.View>
@@ -44,6 +83,7 @@ const styles = StyleSheet.create({
   itemContainer: {
     marginBottom: 6,
     paddingVertical: 19,
+    marginLeft: 5,
   },
   row: {
     justifyContent: "space-between",

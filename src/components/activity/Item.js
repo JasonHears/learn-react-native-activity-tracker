@@ -1,24 +1,29 @@
 import React, { useRef } from "react";
-import { StyleSheet, PanResponder, Animated } from "react-native";
+import { StyleSheet, PanResponder, Animated, Platform } from "react-native";
 import { FlowHighlightView, FlowRow, FlowText } from "../overrides";
 import { COLORS } from "../../variables/styles";
 import { LoadingDots } from "../common/LoadingDots";
 import { formatTime } from "../../utils/functions";
 
 const THRESHOLD = 60;
+const TAP_DELAY = 360;
 
 export const ActivityItem = ({
   id,
   title,
   description,
-  isActive,
+  isActive = false,
   time,
+  controls,
   onActivityChange,
   onSwipeStart,
   onSwipeEnd,
+  onDoubleClick,
 }) => {
   const pan = useRef(new Animated.ValueXY()).current;
+  const lastPressTimeRef = useRef(0);
   const isSwipping = useRef(false);
+  const canControl = controls ?? true;
 
   const panResponder = useRef(
     PanResponder.create({
@@ -52,13 +57,31 @@ export const ActivityItem = ({
     })
   ).current;
 
+  const handlePress = () => {
+    const currentTime = new Date().getTime();
+    const isDoubleClick = currentTime - lastPressTimeRef.current <= TAP_DELAY;
+    if (isDoubleClick) {
+      onDoubleClick();
+    } else {
+      lastPressTimeRef.current = currentTime;
+    }
+  };
+
   const itemBackground = isActive
     ? { backgroundColor: COLORS.semiDarkGray }
     : { backgroundColor: COLORS.darkGray };
 
+  const handlers = canControl ? panResponder.panHandlers : null;
+
   return (
     <Animated.View
-      {...panResponder.panHandlers}
+      onPointerDown={handlePress} // web
+      onTouchStart={() => {
+        if (Platform.OS !== "web") {
+          handlePress();
+        }
+      }} // mobile device
+      {...handlers}
       style={{
         userSelect: "none",
         touchAction: "none",

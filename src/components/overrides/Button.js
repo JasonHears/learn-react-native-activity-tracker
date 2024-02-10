@@ -8,6 +8,8 @@ export const FlowButton = ({
   ghost,
   disabled,
   type,
+  style,
+  size,
   ...restProps
 }) => {
   const color =
@@ -21,6 +23,7 @@ export const FlowButton = ({
 
   const isDisabled = disabled ?? false;
   const isGhost = ghost ?? false;
+  const defaultSize = size ?? SIZES.fontSmall;
 
   const buttonStyle = isGhost
     ? { backgroundColor: "transparent", ...styles.button }
@@ -32,18 +35,31 @@ export const FlowButton = ({
       };
 
   const textStyle = isGhost
-    ? { color: isDisabled ? COLORS.semiDarkGray : color, ...styles.text }
+    ? {
+        color: isDisabled ? COLORS.semiDarkGray : color,
+        ...styles.text,
+        fontSize: defaultSize,
+      }
     : {
         color: isDisabled ? COLORS.semiDarkGray : COLORS.white,
         ...styles.text,
+        fontSize: defaultSize,
       };
 
   return (
-    <Pressable disabled={isDisabled} {...restProps} style={{ ...buttonStyle }}>
+    <Pressable
+      disabled={isDisabled}
+      {...restProps}
+      style={{ ...buttonStyle, ...style }}
+    >
       {typeof Content === "string" ? (
         <Text style={{ ...textStyle }}>{Content}</Text>
       ) : (
-        <Content color={textStyle.color} size={SIZES.fontExtraLarge} />
+        <Content
+          color={textStyle.color}
+          size={defaultSize}
+          style={{ ...textStyle }}
+        />
       )}
     </Pressable>
   );
@@ -51,10 +67,11 @@ export const FlowButton = ({
 
 const styles = StyleSheet.create({
   button: {
-    marginRight: 15,
     userSelect: "none",
   },
   text: {
     padding: 2,
+    display: "flex",
+    justifyContent: "center",
   },
 });

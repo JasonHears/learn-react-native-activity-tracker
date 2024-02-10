@@ -42,3 +42,10 @@ export const generateRandomId = (length = 10) => {
   }
   return randomId;
 };
+
+export const getCurrentDate = () => {
+  const now = new Date();
+  const options = { weekday: "long", month: "short", day: "numeric" };
+  const dateStr = now.toLocaleDateString("en-US", options);
+  return `${dateStr}`;
+};

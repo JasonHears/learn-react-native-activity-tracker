@@ -1,6 +1,7 @@
 import { FlatList, StyleSheet, View, Platform, AppState } from "react-native";
 import { ActivityItem } from "../components/activity/Item";
 import { ItemCreate } from "../components/activity/ItemCreate";
+import { ItemDetail } from "../components/activity/ItemDetail";
 import { ActivityTimer } from "../components/Timer";
 import defaultItems from "../data/activities.json";
 import {
@@ -11,16 +12,17 @@ import {
 } from "../components/overrides";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { loadDayFlowItems, storeDayFlowItems } from "../storage";
-import { usePrevious } from "../utils/functions";
+import { getCurrentDate, usePrevious } from "../utils/functions";
 import { MaterialIcons } from "@expo/vector-icons";
-import { COLORS } from "../variables/styles";
+import { COLORS, SIZES } from "../variables/styles";
 
-export const ActivityHomeScreen = ({ isStorageEnbaled }) => {
+export const ActivityHomeScreen = ({ isStorageEnbaled, openTutorial }) => {
   // loading data
   const [activities, setActivities] = useState([]);
   const [time, setTime] = useState(0);
   const [showItemCreate, setShowItemCreate] = useState(false);
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [focusedItem, setFocusedItem] = useState(null);
 
   const startTimeRef = useRef(0);
   const timeRef = useRef(0);
@@ -137,9 +139,36 @@ export const ActivityHomeScreen = ({ isStorageEnbaled }) => {
   };
 
   const addItem = (newItem) => {
-    console.log(newItem);
     setActivities((activities) => {
       const newActivities = [...activities, newItem];
+      saveToStorage(newActivities);
+      return newActivities;
+    });
+  };
+
+  const deleteItem = (item) => {
+    if (activeItem && activeItem?.id === item.id) {
+      cancelAnimationFrame(timerRequestRef.current);
+      timeRef.current = 0;
+      setTime(0);
+    }
+    setActivities((activities) => {
+      const newActivities = activities.filter((a) => a.id !== item.id);
+      saveToStorage(newActivities);
+      return newActivities;
+    });
+  };
+
+  const updateItem = (itemData) => {
+    setActivities((activities) => {
+      const newActivities = activities.map((a) => {
+        if (a.id === itemData.id) {
+          return { ...a, ...itemData };
+        }
+        return a;
+      });
+
+      updateTimeOnActiveItem(newActivities);
       saveToStorage(newActivities);
       return newActivities;
     });
@@ -148,6 +177,18 @@ export const ActivityHomeScreen = ({ isStorageEnbaled }) => {
   // return view to render
   return (
     <View style={styles.screenContainer}>
+      <FlowRow style={{ justifyContent: "space-between" }}>
+        <FlowText style={{ color: COLORS.lightGray }}>
+          {getCurrentDate()}
+        </FlowText>
+        <FlowButton content={"See Tutorial"} ghost onPressIn={openTutorial} />
+      </FlowRow>
+      <ItemDetail
+        focusedItem={focusedItem}
+        activeTime={time}
+        onItemEdit={updateItem}
+        onItemDelete={deleteItem}
+      />
       <ItemCreate
         visible={showItemCreate}
         onClose={() => setShowItemCreate(false)}
@@ -158,6 +199,7 @@ export const ActivityHomeScreen = ({ isStorageEnbaled }) => {
         <FlowText style={styles.text}>Activities</FlowText>
         <FlowButton
           ghost
+          size={SIZES.fontExtraLarge}
           type="primary"
           onPressIn={() => setShowItemCreate(true)}
           content={(props) => (
@@ -175,6 +217,7 @@ export const ActivityHomeScreen = ({ isStorageEnbaled }) => {
             onActivityChange={checkActivity}
             onSwipeStart={() => setScrollEnabled(false)}
             onSwipeEnd={() => setScrollEnabled(true)}
+            onDoubleClick={() => setFocusedItem({ ...item })}
           />
         )}
       />

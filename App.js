@@ -3,10 +3,19 @@ import { StyleSheet, Text, View, SafeAreaView, Platform } from "react-native";
 import { ActivityHomeScreen } from "./src/screens/Home";
 import { COLORS, SIZES } from "./src/variables/styles";
 import { useEffect, useState } from "react";
-import { isAsyncStorageEnabled } from "./src/storage";
+import {
+  clearStorage,
+  isAsyncStorageEnabled,
+  loadIsTutorialWatched,
+} from "./src/storage";
+import { TutorialScreen } from "./src/screens/Tutorial";
 
 export default function App() {
   const [isStorageEnbaled, setIsStorageEnabled] = useState(null);
+  const [isTutorialWatched, setIsTutorialWatched] = useState(null);
+
+  // DEBUG
+  // clearStorage();
 
   useEffect(() => {
     const checkStorage = async () => {
@@ -14,8 +23,18 @@ export default function App() {
       setIsStorageEnabled(isEnabled);
     };
 
+    const checkTutorial = async () => {
+      const data = await loadIsTutorialWatched();
+      setIsTutorialWatched(!!data);
+    };
+
     checkStorage();
+    checkTutorial();
   }, []);
+
+  const saveTutorial = async (state) => {
+    setIsTutorialWatched(state);
+  };
 
   const containerStyle =
     Platform.OS === "web"
@@ -28,8 +47,21 @@ export default function App() {
   return (
     <SafeAreaView style={styles.safeContainer}>
       <View style={{ ...styles.container, ...containerStyle }}>
-        {isAsyncStorageEnabled == null ? null : (
-          <ActivityHomeScreen isStorageEnbaled={isStorageEnbaled} />
+        {isStorageEnbaled == null || isTutorialWatched == null ? (
+          <></>
+        ) : (
+          <>
+            {!isTutorialWatched && (
+              <TutorialScreen
+                visible={true}
+                onSkip={() => saveTutorial(true)}
+              />
+            )}
+            <ActivityHomeScreen
+              isStorageEnbaled={isStorageEnbaled}
+              openTutorial={() => saveTutorial(false)}
+            />
+          </>
         )}
         <StatusBar style="light" />
       </View>
